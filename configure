@@ -2801,6 +2801,9 @@ if test "x$enable_debug" == "xyes"; then :
 
         DEBUG=true
 
+$as_echo "#define DEBUG 1" >>confdefs.h
+
+
 fi
 
 # ------------------------------------------------------------------------------

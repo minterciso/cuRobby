@@ -32,6 +32,7 @@ AC_ARG_ENABLE([debug],
         AS_HELP_STRING([--enable-debug], [Turn on device debug]))
 AS_IF([test "x$enable_debug" == "xyes"], [
         DEBUG=true
+        AC_DEFINE([DEBUG], [1], [Debug current program])
         ])
 
 # ------------------------------------------------------------------------------
