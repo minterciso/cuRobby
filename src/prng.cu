@@ -41,3 +41,24 @@ __global__ void test_prng(curandState *state, unsigned int state_amnt, float *da
     }
 }
 
+__device__ int get_uniform(curandState *state, int min, int max){
+  return (int)( min + curand_uniform(state) * max);
+}
+
+__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, int *data, int data_amount, int min, int max){
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    curandState local_state = states[tid];
+    data[tid] = get_uniform(&local_state, min, max);
+    states[tid] = local_state;
+  }
+}
+
+__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, float *data, int data_amount){
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    curandState local_state = states[tid];
+    data[tid] = curand_uniform(&local_state);
+    states[tid] = local_state;
+  }
+}

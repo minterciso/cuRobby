@@ -11,6 +11,7 @@ int main(int argc, char **argv)
 
     fprintf(stdout,"[*] Testing the device\n");
     test_prng();
+    test_uniform_prng(0,100);
     fprintf(stdout,"[*] Stopping device\n");
     reset_device();
 

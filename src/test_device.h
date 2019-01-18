@@ -20,5 +20,7 @@
 
 void test_prng(void);
 
+void test_uniform_prng(int min, int max);
+
 #endif //__TEST_DEVICE_H
 
