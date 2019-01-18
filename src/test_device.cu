@@ -51,13 +51,112 @@ void stop_prng(void){
     fflush(stdout);
 }
 
+void test_uniform_prng(int min, int max){
+  int amount = 1024;
+  fprintf(stdout,"[*] Testing Uniform PRNG function\n");
+  float *h_f_data, *d_f_data;
+  int *h_i_data, *d_i_data;
+  int data_amount = 100;
+  size_t f_data_bytes = sizeof(float)*data_amount;
+  size_t i_data_bytes = sizeof(float)*data_amount;
+  int num_threads = 32;
+  int num_blocks = data_amount/num_threads + 1;
+
+  fprintf(stdout,"[*] Allocating data arrays\n");
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Allocating host arrays\n");
+  #endif
+  if((h_i_data = (int*)malloc(i_data_bytes))==NULL){
+    perror("malloc");
+    abort();
+  }
+  if((h_f_data = (float*)malloc(f_data_bytes))==NULL){
+    perror("malloc");
+    abort();
+  }
+  memset(h_i_data, 0, i_data_bytes);
+  memset(h_f_data, 0, f_data_bytes);
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Allocating device array\n");
+  #endif
+  CUDA_CALL(cudaMalloc((void**)&d_f_data, f_data_bytes));
+  CUDA_CALL(cudaMalloc((void**)&d_i_data, i_data_bytes));
+  CUDA_CALL(cudaMemset(d_f_data, 0, f_data_bytes));
+  CUDA_CALL(cudaMemset(d_i_data, 0, i_data_bytes));
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Calling start_prrng()\n");
+  #endif
+  start_prng(amount);
+
+  fprintf(stdout,"[*] Creating random uniform numbers (0->1)\n");
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] - Amount of Blocks:  %d\n", num_blocks);
+  fprintf(stdout,"[D] - Amount of Threads: %d\n", num_threads);
+  #endif
+  test_prng_uniform<<<num_blocks, num_threads>>>(d_randState, amount, d_f_data, data_amount);
+  CUDA_CALL(cudaMemcpy(h_f_data, d_f_data, f_data_bytes, cudaMemcpyDeviceToHost));
+
+  fprintf(stdout, "[*] Creating random uniform numbers (%d -> %d)\n", min,max);
+  test_prng_uniform<<<num_blocks, num_threads>>>(d_randState, amount, d_i_data, data_amount, min, max);
+  CUDA_CALL(cudaMemcpy(h_i_data, d_i_data, i_data_bytes, cudaMemcpyDeviceToHost));
+
+  fprintf(stdout, "[*] Validating data\n");
+  int valid = 0;
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Float data:");
+  #endif
+  for(int i=0;i<data_amount;i++){
+    #ifdef DEBUG
+    fprintf(stdout, "%.2f ", h_f_data[i]);
+    #endif
+    if(h_f_data[i] > 0){
+      valid=1;
+      #ifndef DEBUG
+      break;
+      #endif
+    }
+  }
+  #ifdef DEBUG
+  fprintf(stdout,"\n");
+  #endif
+  if(valid==0)
+    fprintf(stderr,"[E] Float data is invalid!\n");
+  valid=0;
+  #ifdef DEBUG
+  fprintf(stdout,"[D] Int data:");
+  #endif
+  for(int i=0;i<data_amount;i++){
+    #ifdef DEBUG
+    fprintf(stdout, "%d ", h_i_data[i]);
+    #endif
+    if(h_i_data[i] > 0){
+      valid=1;
+      #ifndef DEBUG
+      break;
+      #endif
+    }
+  }
+  #ifdef DEBUG
+  fprintf(stdout,"\n");
+  #endif
+  if(valid == 0)
+    fprintf(stderr,"[E] Int data is invalid!\n");
+  else
+    fprintf(stdout,"[*] Data is valid!\n");
+  fprintf(stdout,"[*] Stopping PRNG\n");
+  stop_prng();
+  fprintf(stdout,"[*] Clearing data\n");
+  CUDA_CALL(cudaFree(d_f_data));
+  CUDA_CALL(cudaFree(d_i_data));
+  free(h_f_data);
+  free(h_i_data);
+}
+
 void test_prng(void){
     int amount = 1024;
 
     fprintf(stdout,"[*] Testing PRNG functions\n");
-#ifdef DEBUG
-    fprintf(stdout,"[D] Calling start_prng()\n");
-#endif
     float *h_data, *d_data;
     int data_amount = 100;
     size_t data_bytes = sizeof(float)*data_amount;
@@ -121,4 +220,7 @@ void test_prng(void){
         fprintf(stdout,"[W] Data is 0!\n");
     fprintf(stdout,"[*] Stopping PRNG\n");
     stop_prng();
+    fprintf(stdout,"[*] Clearing data\n");
+    CUDA_CALL(cudaFree(d_data));
+    free(h_data);
 }
