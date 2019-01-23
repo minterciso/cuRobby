@@ -41,9 +41,13 @@ typedef struct {
  */
 __global__ void create_worlds(curandState *states, int amount_states, world* d_worlds, int amount_world);
 
+/**
+ * @brief Actually creates the world. This function can also be used to reset the world to a new random configuration
+ * @param state The random state to use
+ * @param d_world The pointer to the world to create
+ * @return The amount of cans on the world
+ */
 __device__ int create_world(curandState *state, world *d_world);
-
-__device__ int reset_world(curandState *state, world *d_world);
 
 #endif // __WORLD_H
 

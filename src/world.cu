@@ -27,6 +27,7 @@ __global__ void create_worlds(curandState *states, int amount_states, world* d_w
   const int state_id = threadIdx.x + blockIdx.x*blockDim.x;
   if(state_id < amount_states && state_id < amount_worlds){
     curandState local_state = states[state_id];
+    /*
     for(int i=0;i<W_ROWS;i++){
       for(int j=0;j<W_COLS;j++){
         if(curand_uniform(&local_state) < P_CAN){
@@ -34,15 +35,24 @@ __global__ void create_worlds(curandState *states, int amount_states, world* d_w
           d_worlds[state_id].qtd_cans++;
         }
       }
-    }
+      */
+    create_world(&local_state, &d_worlds[state_id]);
     states[state_id] = local_state;
   }
 }
 
 __device__ int create_world(curandState *state, world *d_world){
-  return 0;
-}
-
-__device__ int reset_world(curandState *state, world *d_world){
-  return 0;
+  d_world->qtd_cans = 0;
+  for(int i=0;i<W_ROWS;i++){
+    for(int j=0;j<W_COLS;j++){
+      if(curand_uniform(state) < P_CAN){
+        d_world->tiles[i][j] = T_CAN;
+        d_world->qtd_cans++;
+      }
+      else{
+        d_world->tiles[i][j] = T_EMPTY;
+      }
+    }
+  }
+  return d_world->qtd_cans;
 }
