@@ -8,6 +8,7 @@ cuRobby_SOURCES = main.c \
 		  	prng.h prng.cu \
 		 	test_device.h test_device.cu\
 		  	utils.h utils.cu\
-			world.h world.cu
+			world.h world.cu \
+			ga.h ga.cu
 cuRobby_CFLAGS  = $(CUDA_CFLAGS)
 cuRobby_LDADD  = $(CUDA_LIBS) -lcurand
