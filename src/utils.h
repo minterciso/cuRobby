@@ -32,8 +32,15 @@
                 }                                                                       \
 }
 
-int start_device(void);
-int reset_device(void);
+/**
+ * @brief Start the first CUDA Device
+ */
+void start_device(void);
+
+/**
+ * @brief Resets the device for usage
+ */
+void reset_device(void);
 
 #endif //__UTILS_H
 
