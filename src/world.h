@@ -32,7 +32,12 @@ typedef struct {
 }world;
 
 /**
- * @brief Create all worlds in one execution of the kernel
+ * @brief Create all worlds in one execution of the kernel.
+ * @param states An already initialized curandState array
+ * @param amount_states How many states are there in the array
+ * @param d_worlds A pointer to a device allocate memory of worlds
+ * @param amount_world How many worlds are there
+ * @note We need the amount_states to be bigger than the amount_world, otherwise we will get the same result as old states
  */
 __global__ void create_worlds(curandState *states, int amount_states, world* d_worlds, int amount_world);
 

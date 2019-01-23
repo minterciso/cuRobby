@@ -230,7 +230,7 @@ void test_prng(void){
 void test_world_creation(int amount){
   fprintf(stdout,"[*] Starting World Creation...\n");
 
-  int prng_amount = 512;
+  int prng_amount = amount;
   world *h_worlds, *d_worlds;
   size_t world_bytes = sizeof(world)*amount;
 
@@ -262,8 +262,8 @@ void test_world_creation(int amount){
   dim3 num_threads(32,1);
   dim3 num_blocks( (prng_amount/num_threads.x + 1), 1);
   */
-  dim3 num_threads(1);
-  dim3 num_blocks(1);
+  dim3 num_threads(512);
+  dim3 num_blocks(amount/num_threads.x + 1);
   #ifdef DEBUG
   fprintf(stdout,"[D] Kernel parameters:\n");
   fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
@@ -283,8 +283,16 @@ void test_world_creation(int amount){
   }
   fprintf(stdout,"[*] Amount of cans: %d\n", w->qtd_cans);
   fprintf(stdout,"[*] Printing sample world 2: \n");
-    w = &h_worlds[1];
-    for(int i=0;i<W_ROWS; i++){
+  w = &h_worlds[1];
+  for(int i=0;i<W_ROWS; i++){
+    for(int j=0;j<W_COLS;j++)
+      fprintf(stdout,"%c", (w->tiles[i][j] == T_CAN)?'*':'_');
+    fprintf(stdout,"\n");
+  }
+  fprintf(stdout,"[*] Amount of cans: %d\n", w->qtd_cans);
+  fprintf(stdout,"[*] Printing sample world %d: \n", amount-1);
+  w = &h_worlds[amount-1];
+  for(int i=0;i<W_ROWS; i++){
       for(int j=0;j<W_COLS;j++)
         fprintf(stdout,"%c", (w->tiles[i][j] == T_CAN)?'*':'_');
       fprintf(stdout,"\n");
