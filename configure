@@ -2814,11 +2814,13 @@ then
    { $as_echo "$as_me:${as_lineno-$LINENO}: Enabling DEBUG" >&5
 $as_echo "$as_me: Enabling DEBUG" >&6;}
    NVCCFLAGS="-g -G"
+   NVCC_CFLAGS="-g -G"
    CFLAGS="-g -ggdb"
 else
    { $as_echo "$as_me:${as_lineno-$LINENO}: Enabling Performance" >&5
 $as_echo "$as_me: Enabling Performance" >&6;}
    NVCCFLAGS="-O3 -use_fast_math"
+   NVCC_CFLAGS="-O3 -use_fast_math"
    CFLAGS="-O3 -fexpensive-optimizations -use_fast_math"
 fi
 

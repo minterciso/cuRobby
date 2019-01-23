@@ -29,6 +29,8 @@ __global__ void test_prng(curandState *state, unsigned int state_amnt, float *da
 
 __device__ int get_uniform(curandState *state, int min, int max);
 
+__device__ float get_uniform(curandState *state);
+
 __global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, int *data, int data_amount, int min, int max);
 
 __global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, float *data, int data_amount);

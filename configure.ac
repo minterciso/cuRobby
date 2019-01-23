@@ -42,10 +42,12 @@ if test x$DEBUG == xtrue
 then
    AC_MSG_NOTICE([Enabling DEBUG])
    NVCCFLAGS="-g -G"
+   NVCC_CFLAGS="-g -G"
    CFLAGS="-g -ggdb"
 else
    AC_MSG_NOTICE([Enabling Performance])
    NVCCFLAGS="-O3 -use_fast_math"
+   NVCC_CFLAGS="-O3 -use_fast_math"
    CFLAGS="-O3 -fexpensive-optimizations -use_fast_math"
 fi
 AC_SUBST(NVCCFLAGS)

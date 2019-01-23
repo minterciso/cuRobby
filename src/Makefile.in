@@ -100,7 +100,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am_cuRobby_OBJECTS = cuRobby-main.$(OBJEXT) prng.$(OBJEXT) \
-	test_device.$(OBJEXT) utils.$(OBJEXT)
+	test_device.$(OBJEXT) utils.$(OBJEXT) world.$(OBJEXT)
 cuRobby_OBJECTS = $(am_cuRobby_OBJECTS)
 am__DEPENDENCIES_1 =
 cuRobby_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -262,9 +262,10 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 CCLD = $(CC)
 cuRobby_SOURCES = main.c \
-		  prng.h prng.cu \
-		  test_device.h test_device.cu\
-		  utils.h utils.cu
+		  	prng.h prng.cu \
+		 	test_device.h test_device.cu\
+		  	utils.h utils.cu\
+			world.h world.cu
 
 cuRobby_CFLAGS = $(CUDA_CFLAGS)
 cuRobby_LDADD = $(CUDA_LIBS) -lcurand

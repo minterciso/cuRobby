@@ -1,12 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  test_device.h
+ *       Filename:  consts.h
  *
- *    Description:  Test kernels and methods on the device
+ *    Description:  Define the constants used on the GA and Robby
  *
  *        Version:  1.0
- *        Created:  17/01/2019 17:43:23
+ *        Created:  17/01/2019 17:30:49
  *       Revision:  none
  *       Compiler:  nvcc
  *
@@ -15,14 +15,21 @@
  *
  * =====================================================================================
  */
-#ifndef __TEST_DEVICE_H
-#define __TEST_DEVICE_H
+#ifndef __CONSTS_H
+#define __CONSTS_H
 
-void test_prng(void);
+/*
+ * Some definitions:
+ * W_ => World
+ * T_ => Tile
+ * P_ => Probability
+ */
 
-void test_uniform_prng(int min, int max);
+// World
+#define W_ROWS 10
+#define W_COLS 10
+#define T_EMPTY 0
+#define T_CAN   1
+#define P_CAN 0.5
 
-void test_world_creation(int amount);
-
-#endif //__TEST_DEVICE_H
-
+#endif // __CONSTS_H

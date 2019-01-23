@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,6 +13,7 @@ int main(int argc, char **argv)
     fprintf(stdout,"[*] Testing the device\n");
     test_prng();
     test_uniform_prng(0,100);
+    test_world_creation(100);
     fprintf(stdout,"[*] Stopping device\n");
     reset_device();
 
