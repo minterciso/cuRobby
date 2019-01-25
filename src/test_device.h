@@ -24,5 +24,7 @@ void test_uniform_prng(int min, int max);
 
 void test_world_creation(int amount);
 
+void test_population_creation(int amount);
+
 #endif //__TEST_DEVICE_H
 

@@ -24,6 +24,7 @@
 #include "prng.h"
 #include "consts.h"
 #include "world.h"
+#include "robby.h"
 
 void start_prng(int amount){
   size_t rand_bytes = sizeof(curandState)*amount;
@@ -184,7 +185,7 @@ void test_prng(void){
   fprintf(stdout,"[D] Calling start_prng()\n");
 #endif
   start_prng(amount);
-    
+
   fprintf(stdout,"[*] Creating random numbers\n");
 #ifdef DEBUG
   fprintf(stdout,"[D] Starting kernel to find mean of 100 numbers, and store on an array with %d size\n", data_amount);
@@ -234,41 +235,37 @@ void test_world_creation(int amount){
   world *h_worlds, *d_worlds;
   size_t world_bytes = sizeof(world)*amount;
 
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(stdout,"[D] Starting PRNG\n");
   fprintf(stdout,"[D] - Using %d states\n", prng_amount);
-  #endif
+#endif
   start_prng(prng_amount);
 
   fprintf(stdout,"[*] Allocating memory\n");
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(stdout,"[D] - Amount: %d\n", amount);
   fprintf(stdout,"[D] - MB:     %.2f\n", (float)world_bytes/(1024.0f*1024.0f));
   fprintf(stdout,"[D] Allocating host memory\n");
-  #endif
+#endif
   if((h_worlds=(world*)malloc(world_bytes))==NULL){
     perror("malloc");
     abort();
   }
   memset(h_worlds, 0, world_bytes);
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(stdout,"[D] Allocating Device memory\n");
-  #endif
+#endif
   CUDA_CALL(cudaMalloc((void**)&d_worlds, world_bytes));
   CUDA_CALL(cudaMemset(d_worlds, 0, world_bytes));
 
   fprintf(stdout,"[*] Calling kernel to create all worlds at once\n");
-  /*
-  dim3 num_threads(32,1);
-  dim3 num_blocks( (prng_amount/num_threads.x + 1), 1);
-  */
   dim3 num_threads(512);
   dim3 num_blocks(amount/num_threads.x + 1);
-  #ifdef DEBUG
+#ifdef DEBUG
   fprintf(stdout,"[D] Kernel parameters:\n");
   fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
   fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
-  #endif
+#endif
   create_worlds<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_worlds, amount);
   CUDA_CALL(cudaDeviceSynchronize());
   CUDA_CALL(cudaGetLastError());
@@ -293,13 +290,128 @@ void test_world_creation(int amount){
   fprintf(stdout,"[*] Printing sample world %d: \n", amount-1);
   w = &h_worlds[amount-1];
   for(int i=0;i<W_ROWS; i++){
-      for(int j=0;j<W_COLS;j++)
-        fprintf(stdout,"%c", (w->tiles[i][j] == T_CAN)?'*':'_');
-      fprintf(stdout,"\n");
-    }
-    fprintf(stdout,"[*] Amount of cans: %d\n", w->qtd_cans);
+    for(int j=0;j<W_COLS;j++)
+      fprintf(stdout,"%c", (w->tiles[i][j] == T_CAN)?'*':'_');
+    fprintf(stdout,"\n");
+  }
+  fprintf(stdout,"[*] Amount of cans: %d\n", w->qtd_cans);
   fprintf(stdout,"[*] Cleaning up\n");
   stop_prng();
   free(h_worlds);
+  CUDA_CALL(cudaFree(d_worlds));
+}
+
+void test_population_creation(int amount){
+  fprintf(stdout,"[*] Starting population creation\n");
+
+  int prng_amount = amount;
+  robby *h_population, *d_population;
+  size_t robby_bytes = sizeof(robby)*amount;
+
+#ifdef DEBUG
+  fprintf(stdout,"[D] Starting PRNG\n");
+  fprintf(stdout,"[D] - Using %d states\n", prng_amount);
+#endif
+  start_prng(prng_amount);
+
+  fprintf(stdout,"[*] Allocating memory\n");
+#ifdef DEBUG
+  fprintf(stdout,"[D] - Amount: %d\n", amount);
+  fprintf(stdout,"[D] - MB:     %.2f\n", (float)robby_bytes/(1024.0f*1024.0f));
+  fprintf(stdout,"[D] Allocating host memory\n");
+#endif
+  if((h_population=(robby*)malloc(robby_bytes))==NULL){
+    perror("malloc");
+    abort();
+  }
+  memset(h_population, 0, robby_bytes);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Allocating Device memory\n");
+#endif
+  CUDA_CALL(cudaMalloc((void**)&d_population, robby_bytes));
+  CUDA_CALL(cudaMemset(d_population, 0, robby_bytes));
+
+  fprintf(stdout,"[*] Calling kernel to create the population at once\n");
+  dim3 num_threads(512);
+  dim3 num_blocks(amount/num_threads.x + 1);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
+  fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
+#endif
+  create_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, amount);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaGetLastError());
+  CUDA_CALL(cudaMemcpy(h_population, d_population, robby_bytes, cudaMemcpyDeviceToHost));
+
+  robby *r_ptr;
+  fprintf(stdout,"[*] Printing sample Individual 1\n");
+  r_ptr = &h_population[0];
+  fprintf(stdout,"[*] - Strategy: ");
+  for(int i=0;i<S_SIZE;i++) fprintf(stdout,"%d", r_ptr->strategy[i]);
+  fprintf(stdout,"\n");
+  fprintf(stdout,"[*] - Fitness: %.2f\n",r_ptr->fitness);
+  fprintf(stdout,"[*] - Weight : %.2f\n", r_ptr->weight);
+  fprintf(stdout,"[*] Printing sample Individual 2\n");
+  r_ptr = &h_population[1];
+  fprintf(stdout,"[*] - Strategy: ");
+  for(int i=0;i<S_SIZE;i++) fprintf(stdout,"%d", r_ptr->strategy[i]);
+  fprintf(stdout,"\n");
+  fprintf(stdout,"[*] - Fitness: %.2f\n",r_ptr->fitness);
+  fprintf(stdout,"[*] - Weight : %.2f\n", r_ptr->weight);
+  fprintf(stdout,"[*] Printing sample Individual %d\n", amount-1);
+  r_ptr = &h_population[amount -1];
+  fprintf(stdout,"[*] - Strategy: ");
+  for(int i=0;i<S_SIZE;i++) fprintf(stdout,"%d", r_ptr->strategy[i]);
+  fprintf(stdout,"\n");
+  fprintf(stdout,"[*] - Fitness: %.2f\n",r_ptr->fitness);
+  fprintf(stdout,"[*] - Weight : %.2f\n", r_ptr->weight);
+
+  fprintf(stdout,"[*] Creating sample worlds");
+  world *d_worlds;
+  int amount_worlds = 100;
+  if(amount_worlds > amount)
+    amount_worlds = amount;
+  size_t world_bytes = sizeof(world)*amount_worlds;
+#ifdef DEBUG
+  fprintf(stdout,"[D] Allocating world memory on device\n");
+#endif
+  CUDA_CALL(cudaMalloc((void**)&d_worlds, world_bytes));
+  CUDA_CALL(cudaMemset(d_worlds,0,world_bytes));
+#ifdef DEBUG
+  fprintf(stdout,"[*] Calling kernel to create all worlds at once\n");
+#endif
+  dim3 num_threads_w(512);
+  dim3 num_blocks_w(amount_worlds/num_threads.x + 1);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
+  fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
+#endif
+  create_worlds<<<num_blocks_w, num_threads_w>>>(d_randState, prng_amount, d_worlds, amount_worlds);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaGetLastError());
+
+  fprintf(stdout,"[*] Executing population on device\n");
+  dim3 num_threads_e(512);
+  dim3 num_blocks_e(amount/num_threads.x + 1);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
+  fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
+#endif
+  execute_population<<<num_blocks_e, num_threads_e>>>(d_randState, prng_amount, d_population, amount, d_worlds, amount_worlds);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaGetLastError());
+  CUDA_CALL(cudaMemcpy(h_population, d_population, robby_bytes, cudaMemcpyDeviceToHost));
+
+  fprintf(stdout,"[*] Fitness: ");
+  for(int i=0;i<amount;i++) fprintf(stdout,"%.2f,", h_population[i].fitness);
+  fprintf(stdout,"\n");
+
+  fprintf(stdout,"[*] Cleaning up\n");
+  stop_prng();
+  free(h_population);
+  CUDA_CALL(cudaFree(d_population));
   CUDA_CALL(cudaFree(d_worlds));
 }
