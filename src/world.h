@@ -28,6 +28,8 @@
 
 typedef struct {
   int tiles[W_ROWS][W_COLS];
+  int r_row;
+  int r_col;
   int qtd_cans;
 }world;
 

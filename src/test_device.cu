@@ -367,8 +367,51 @@ void test_population_creation(int amount){
   fprintf(stdout,"[*] - Fitness: %.2f\n",r_ptr->fitness);
   fprintf(stdout,"[*] - Weight : %.2f\n", r_ptr->weight);
 
+  fprintf(stdout,"[*] Creating sample worlds");
+  world *d_worlds;
+  int amount_worlds = 100;
+  if(amount_worlds > amount)
+    amount_worlds = amount;
+  size_t world_bytes = sizeof(world)*amount_worlds;
+#ifdef DEBUG
+  fprintf(stdout,"[D] Allocating world memory on device\n");
+#endif
+  CUDA_CALL(cudaMalloc((void**)&d_worlds, world_bytes));
+  CUDA_CALL(cudaMemset(d_worlds,0,world_bytes));
+#ifdef DEBUG
+  fprintf(stdout,"[*] Calling kernel to create all worlds at once\n");
+#endif
+  dim3 num_threads_w(512);
+  dim3 num_blocks_w(amount_worlds/num_threads.x + 1);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
+  fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
+#endif
+  create_worlds<<<num_blocks_w, num_threads_w>>>(d_randState, prng_amount, d_worlds, amount_worlds);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaGetLastError());
+
+  fprintf(stdout,"[*] Executing population on device\n");
+  dim3 num_threads_e(512);
+  dim3 num_blocks_e(amount/num_threads.x + 1);
+#ifdef DEBUG
+  fprintf(stdout,"[D] Kernel parameters:\n");
+  fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
+  fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
+#endif
+  execute_population<<<num_blocks_e, num_threads_e>>>(d_randState, prng_amount, d_population, amount, d_worlds, amount_worlds);
+  CUDA_CALL(cudaDeviceSynchronize());
+  CUDA_CALL(cudaGetLastError());
+  CUDA_CALL(cudaMemcpy(h_population, d_population, robby_bytes, cudaMemcpyDeviceToHost));
+
+  fprintf(stdout,"[*] Fitness: ");
+  for(int i=0;i<amount;i++) fprintf(stdout,"%.2f,", h_population[i].fitness);
+  fprintf(stdout,"\n");
+
   fprintf(stdout,"[*] Cleaning up\n");
   stop_prng();
   free(h_population);
   CUDA_CALL(cudaFree(d_population));
+  CUDA_CALL(cudaFree(d_worlds));
 }

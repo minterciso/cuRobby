@@ -30,6 +30,7 @@
 #define W_COLS 10
 #define T_EMPTY 0
 #define T_CAN   1
+#define T_WALL  2
 #define P_CAN 0.5
 
 // Robby
