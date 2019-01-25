@@ -216,14 +216,22 @@ void execute_ga(void){
     CUDA_CALL(cudaGetLastError());
     CUDA_CALL(cudaMemcpy(h_population, d_population, population_bytes, cudaMemcpyDeviceToHost));
     qsort(h_population, GA_POP_SIZE, sizeof(robby), cmp_robby);
-#ifdef DEBUG
-    fprintf(stdout,"[D] %03d: %.5f\n", g, h_population[0].fitness);
-#endif
+    fprintf(stdout,"[*] %03d: %.2f\n", g, h_population[0].fitness);
+//#ifdef DEBUG
+    fprintf(stdout,"[D] %03d: ", g);
+    for(int i=0;i<GA_POP_SIZE;i++) fprintf(stdout,"%.2f ", h_population[i].fitness);
+    fprintf(stdout,"\n");
+//#endif
     if(g == GA_RUNS - 1)
       break;
     crossover_and_mutate(h_population, GA_SELECTION);
     CUDA_CALL(cudaMemcpy(d_population, h_population, population_bytes, cudaMemcpyHostToDevice));
   }
+  fprintf(stdout,"[*] Best:\n");
+  fprintf(stdout,"[*] - Fitness: %.10f\n",h_population[0].fitness);
+  fprintf(stdout,"[*] - Strategy: ");
+  for(int i=0;i<S_SIZE;i++) fprintf(stdout,"%d", h_population[0].strategy[i]);
+  fprintf(stdout,"\n");
 
   fprintf(stdout,"[*] Cleaning\n");
   stop_prng_device();
