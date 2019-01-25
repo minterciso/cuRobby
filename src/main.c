@@ -5,6 +5,7 @@
 
 #include "utils.h"
 #include "test_device.h"
+#include "ga.h"
 
 const char *prog_name;
 
@@ -47,6 +48,9 @@ int main(int argc, char **argv)
     test_uniform_prng(0,100);
     test_world_creation(100);
     test_population_creation(200);
+  }
+  else{
+    execute_ga();
   }
   fprintf(stdout,"[*] Stopping device\n");
   reset_device();

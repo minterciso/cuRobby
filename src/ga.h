@@ -9,7 +9,7 @@
 #define GA_H_
 
 
-
+void execute_ga(void);
 
 
 #endif /* GA_H_ */
