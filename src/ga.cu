@@ -111,7 +111,9 @@ int crossover_and_mutate(FILE *debugFP, robby *pop, int selection_type){
       weighted_sum += pop[i].weight;
     }
   }
+#ifdef DEBUG
   fprintf(debugFP, "Weighted Sum: %f\n", weighted_sum);
+#endif
 
   // Allocate memory for the old population
   if((old_pop=(robby*)malloc(pop_bytes))==NULL){
@@ -129,39 +131,53 @@ int crossover_and_mutate(FILE *debugFP, robby *pop, int selection_type){
     // Select 2 parents
     p1_idx = select_individual(old_pop, weighted_sum, selection_type);
     p2_idx = select_individual(old_pop, weighted_sum, selection_type);
+#ifdef DEBUG
     fprintf(debugFP, "----------------------\n");
     fprintf(debugFP, "Parent 1: %d (%.5f) [", p1_idx, old_pop[p1_idx].fitness);
     for(int j=0;j<S_SIZE;j++) fprintf(debugFP, "%d", old_pop[p1_idx].strategy[j]);
     fprintf(debugFP, "]\nParent 2: %d (%.5f) [", p2_idx, old_pop[p2_idx].fitness);
     for(int j=0;j<S_SIZE;j++) fprintf(debugFP, "%d", old_pop[p2_idx].strategy[j]);
     fprintf(debugFP, "]\n");
+#endif
     // If we have to crossover...
     if(gsl_rng_uniform(h_prng) < GA_PROB_XOVER){
       // Select a random xover point
       xp = gsl_rng_uniform_int(h_prng, S_SIZE);
+#ifdef DEBUG
       fprintf(debugFP, "XP: %d\n", xp);
-      // Create 1 sons
       fprintf(debugFP, "Strategy:");
+#endif
+      // Create 1 son
       for(int j=0;j<xp;j++){
         pop[i].strategy[j] = old_pop[p1_idx].strategy[j];
+#ifdef DEBUG
         fprintf(debugFP, "%d", old_pop[p1_idx].strategy[j]);
+#endif
       }
+#ifdef DEBUG
       fprintf(debugFP, "|");
+#endif
       for(int j=xp;j<S_SIZE;j++){
         pop[i].strategy[j] = old_pop[p2_idx].strategy[j];
+#ifdef DEBUG
         fprintf(debugFP, "%d", old_pop[p2_idx].strategy[j]);
+#endif
       }
     }
     else // If we don't need to crossover, just copy the strategy
       memcpy(&pop[i].strategy, &old_pop[p1_idx].strategy, sizeof(int)*S_SIZE);
+#ifdef DEBUG
     fprintf(debugFP, "Mutation:\n");
+#endif
     pop[i].fitness = -99.99;
     pop[i].weight = -99.99;
     // Now check for mutation
     for(int j=0;j<S_SIZE;j++){
       if(gsl_rng_uniform(h_prng) < GA_PROB_MUTATION){
         pop[i].strategy[j] = gsl_rng_uniform_int(h_prng, S_MAX_OPTIONS);
+#ifdef DEBUG
         fprintf(debugFP, "(%d) = %d\n", j,pop[i].strategy[j]);
+#endif
       }
     }
   }
@@ -243,10 +259,12 @@ void execute_ga(void){
   fprintf(stdout,"[*] Evolving\n");
   for(int g=0;g<GA_RUNS;g++){
     snprintf(fname, 30, "output/debug/xover_%d.log", g);
+#ifdef DEBUG
     if((debugFP = fopen(fname, "w"))==NULL){
       perror("fopen");
       abort();
     }
+#endif
     /*
     num_blocks = GA_WORLDS/num_threads + 1;
     create_worlds<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_worlds, GA_WORLDS);
@@ -269,7 +287,9 @@ void execute_ga(void){
       break;
     crossover_and_mutate(debugFP, h_population, GA_SELECTION);
     CUDA_CALL(cudaMemcpy(d_population, h_population, population_bytes, cudaMemcpyHostToDevice));
+#ifdef DEBUG
     fclose(debugFP);
+#endif
   }
   fprintf(stdout,"[*] Best:\n");
   fprintf(stdout,"[*] - Fitness: %.10f\n",h_population[0].fitness);
