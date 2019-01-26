@@ -1,15 +1,25 @@
 /*
- * robby.cu
+ * kernel.cu
  *
- *  Created on: 23/01/2019
+ *  Created on: 26/01/2019
  *      Author: minterciso
  */
-#include "robby.h"
-#include "consts.h"
+#include "kernels.h"
 #include "prng.h"
+#include "consts.h"
+#include "utils.h"
 
 #include <cuda.h>
+#include <stdio.h>
+#include <curand_kernel.h>
+#include <time.h>
+#include <sys/time.h>
+#include <gsl/gsl_rng.h>
 
+
+/*********
+ * ROBBY *
+ ********/
 __global__ void execute_population(curandState *states, int amount_states, robby *d_robby, int amount_robby/*, world *d_world*/, int amount_world){
   const int tid = threadIdx.x + blockIdx.x*blockDim.x;
   if(tid < amount_states && tid < amount_robby){
@@ -129,4 +139,81 @@ __device__ int execute_strategy(curandState *state, robby *d_robby, world *w){
   }
 
   return score;
+}
+
+/********
+ * PRNG *
+ *******/
+__global__ void setup_prng(curandState *state, unsigned long long seed, unsigned int amount){
+  const int tid = threadIdx.x + blockDim.x*blockIdx.x;
+  if(tid < amount)
+    curand_init(seed, 0, tid, &state[tid]);
+}
+
+__global__ void test_prng(curandState *state, unsigned int state_amnt, float *data, int data_amount){
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    float sum = 0.0;
+    curandState local_state = state[tid];
+    for(int i=0;i<100;i++)
+      sum += curand_uniform(&local_state);
+    data[tid] = sum/100;
+    state[tid] = local_state;
+  }
+}
+
+__device__ int get_uniform(curandState *state, int min, int max){
+  return (int)( min + curand_uniform(state) * max);
+}
+
+__device__ float get_uniform(curandState *state){
+  return curand_uniform(state);
+}
+
+__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, int *data, int data_amount, int min, int max){
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    curandState local_state = states[tid];
+    data[tid] = get_uniform(&local_state, min, max);
+    states[tid] = local_state;
+  }
+}
+
+__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, float *data, int data_amount){
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    curandState local_state = states[tid];
+    data[tid] = curand_uniform(&local_state);
+    states[tid] = local_state;
+  }
+}
+
+/*********
+ * WORLD *
+ ********/
+__global__ void create_worlds(curandState *states, int amount_states, world* d_worlds, int amount_worlds){
+  const int state_id = threadIdx.x + blockIdx.x*blockDim.x;
+  if(state_id < amount_states && state_id < amount_worlds){
+    curandState local_state = states[state_id];
+    create_world(&local_state, &d_worlds[state_id]);
+    states[state_id] = local_state;
+  }
+}
+
+__device__ int create_world(curandState *state, world *d_world){
+  d_world->qtd_cans = 0;
+  d_world->r_row = 0;
+  d_world->r_col = 0;
+  for(int i=0;i<W_ROWS;i++){
+    for(int j=0;j<W_COLS;j++){
+      if(curand_uniform(state) < P_CAN){
+        d_world->tiles[i][j] = T_CAN;
+        d_world->qtd_cans++;
+      }
+      else{
+        d_world->tiles[i][j] = T_EMPTY;
+      }
+    }
+  }
+  return d_world->qtd_cans;
 }

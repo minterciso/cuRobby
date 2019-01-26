@@ -5,14 +5,13 @@
  *      Author: minterciso
  */
 #include "ga.h"
-#include "world.h"
-#include "robby.h"
-#include "consts.h"
-#include "prng.h"
+#include "kernels.h"
 #include "utils.h"
+#include "consts.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 #include <cuda.h>
 #include <curand_kernel.h>
 
@@ -44,6 +43,23 @@ void start_prng_device(int amount){
   fprintf(stdout,"[*] Done!\n");
 }
 
+int start_host_prng(void){
+  const gsl_rng_type *T = gsl_rng_mt19937;
+  if((h_prng=gsl_rng_alloc(T))==NULL){
+    fprintf(stderr,"[E] Error starting PRNG\n");
+    return -1;
+  }
+  struct timeval tp;
+  gettimeofday(&tp, (struct timezone *)0);
+  gsl_rng_set(h_prng, tp.tv_usec);
+  return 0;
+}
+
+void stop_host_prng(void){
+  gsl_rng_free(h_prng);
+}
+
+
 void stop_prng_device(void){
   fprintf(stdout,"[*] Clearing PRNG Device memory\n");
   fflush(stdout);
@@ -60,7 +76,7 @@ int select_individual(robby *pop, double weighted_sum, int selection_type){
     int index = -1;
 
     // Now select a random value from 0 to weighted_sum
-    rnd = (float)(rand()/(float)RAND_MAX) * weighted_sum;
+    rnd = gsl_rng_uniform(h_prng) * weighted_sum;
     // Now find the index corresponding to the rnd probability
     while(sum < rnd){
       index++;
@@ -69,20 +85,20 @@ int select_individual(robby *pop, double weighted_sum, int selection_type){
     return index;
   }
   if(selection_type == GA_SELECTION_ELITE){
-    return rand() % GA_POP_ELITE;
+    return gsl_rng_uniform_int(h_prng, GA_POP_ELITE);
   }
   if(selection_type == GA_SELECTION_TOURNAMENT){
     // Select at random 2 individuals and return the one with the best fitness
     int idx1, idx2;
-    idx1 = rand() % GA_POP_SIZE;
-    idx2 = rand() % GA_POP_SIZE;
+    idx1 = gsl_rng_uniform_int(h_prng, GA_POP_SIZE);
+    idx2 = gsl_rng_uniform_int(h_prng, GA_POP_SIZE);
     if(pop[idx1].fitness > pop[idx2].fitness) return idx1;
     return idx2;
   }
   return -1;
 }
 
-int crossover_and_mutate(robby *pop, int selection_type){
+int crossover_and_mutate(FILE *debugFP, robby *pop, int selection_type){
   robby *old_pop = NULL;
   size_t pop_bytes = sizeof(robby) * GA_POP_SIZE;
 
@@ -95,6 +111,7 @@ int crossover_and_mutate(robby *pop, int selection_type){
       weighted_sum += pop[i].weight;
     }
   }
+  fprintf(debugFP, "Weighted Sum: %f\n", weighted_sum);
 
   // Allocate memory for the old population
   if((old_pop=(robby*)malloc(pop_bytes))==NULL){
@@ -105,33 +122,47 @@ int crossover_and_mutate(robby *pop, int selection_type){
   memset(pop, 0, pop_bytes); // Clear the current population
 
   // Now create a new population
-  float rnd = 0.0;
+  //float rnd = 0.0;
   for(int i=0;i<GA_POP_SIZE;i++){
     int p1_idx, p2_idx;
     int xp;
     // Select 2 parents
     p1_idx = select_individual(old_pop, weighted_sum, selection_type);
     p2_idx = select_individual(old_pop, weighted_sum, selection_type);
+    fprintf(debugFP, "----------------------\n");
+    fprintf(debugFP, "Parent 1: %d (%.5f) [", p1_idx, old_pop[p1_idx].fitness);
+    for(int j=0;j<S_SIZE;j++) fprintf(debugFP, "%d", old_pop[p1_idx].strategy[j]);
+    fprintf(debugFP, "]\nParent 2: %d (%.5f) [", p2_idx, old_pop[p2_idx].fitness);
+    for(int j=0;j<S_SIZE;j++) fprintf(debugFP, "%d", old_pop[p2_idx].strategy[j]);
+    fprintf(debugFP, "]\n");
     // If we have to crossover...
-    rnd = (float)(rand()/(float)RAND_MAX);
-    if(rnd < GA_PROB_XOVER){
+    if(gsl_rng_uniform(h_prng) < GA_PROB_XOVER){
       // Select a random xover point
-      xp = rand() % S_SIZE;
+      xp = gsl_rng_uniform_int(h_prng, S_SIZE);
+      fprintf(debugFP, "XP: %d\n", xp);
       // Create 1 sons
-      for(int j=0;j<xp;j++)
+      fprintf(debugFP, "Strategy:");
+      for(int j=0;j<xp;j++){
         pop[i].strategy[j] = old_pop[p1_idx].strategy[j];
-      for(int j=xp;j<S_SIZE;j++)
+        fprintf(debugFP, "%d", old_pop[p1_idx].strategy[j]);
+      }
+      fprintf(debugFP, "|");
+      for(int j=xp;j<S_SIZE;j++){
         pop[i].strategy[j] = old_pop[p2_idx].strategy[j];
+        fprintf(debugFP, "%d", old_pop[p2_idx].strategy[j]);
+      }
     }
     else // If we don't need to crossover, just copy the strategy
       memcpy(&pop[i].strategy, &old_pop[p1_idx].strategy, sizeof(int)*S_SIZE);
+    fprintf(debugFP, "Mutation:\n");
     pop[i].fitness = -99.99;
     pop[i].weight = -99.99;
     // Now check for mutation
     for(int j=0;j<S_SIZE;j++){
-      rnd = (float)(rand()/(float)RAND_MAX);
-      if(rnd < GA_PROB_MUTATION)
-        pop[i].strategy[j] = rand() % S_MAX_OPTIONS;
+      if(gsl_rng_uniform(h_prng) < GA_PROB_MUTATION){
+        pop[i].strategy[j] = gsl_rng_uniform_int(h_prng, S_MAX_OPTIONS);
+        fprintf(debugFP, "(%d) = %d\n", j,pop[i].strategy[j]);
+      }
     }
   }
   free(old_pop);
@@ -156,6 +187,10 @@ void execute_ga(void){
    * Extra1) create graph with gnuplot automatically
    */
   fprintf(stdout,"[*] Starting PRNG\n");
+  FILE *debugFP = NULL;
+  char fname[30];
+  memset(fname, 0, 30);
+
 #ifdef DEBUG
   fprintf(stdout,"[D] - Host\n");
 #endif
@@ -166,12 +201,13 @@ void execute_ga(void){
   size_t population_bytes = sizeof(robby)*GA_POP_SIZE;
   size_t world_bytes = sizeof(world)*GA_WORLDS;
 
-  srand(time(NULL));
+  //srand(time(NULL));
 #ifdef DEBUG
   fprintf(stdout,"[D] - Device\n");
   fprintf(stdout,"[D] - # States: %d\n", prng_amount);
 #endif
   start_prng_device(prng_amount);
+  start_host_prng();
 
   fprintf(stdout, "[*] Allocating memory\n");
 #ifdef DEBUG
@@ -206,26 +242,34 @@ void execute_ga(void){
 
   fprintf(stdout,"[*] Evolving\n");
   for(int g=0;g<GA_RUNS;g++){
+    snprintf(fname, 30, "output/debug/xover_%d.log", g);
+    if((debugFP = fopen(fname, "w"))==NULL){
+      perror("fopen");
+      abort();
+    }
+    /*
     num_blocks = GA_WORLDS/num_threads + 1;
     create_worlds<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_worlds, GA_WORLDS);
     CUDA_CALL(cudaDeviceSynchronize());
     CUDA_CALL(cudaGetLastError());
+    */
     num_blocks = GA_POP_SIZE/num_threads + 1;
-    execute_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, GA_POP_SIZE, d_worlds, GA_WORLDS);
+    execute_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, GA_POP_SIZE/*, d_worlds*/, GA_WORLDS);
     CUDA_CALL(cudaDeviceSynchronize());
     CUDA_CALL(cudaGetLastError());
     CUDA_CALL(cudaMemcpy(h_population, d_population, population_bytes, cudaMemcpyDeviceToHost));
     qsort(h_population, GA_POP_SIZE, sizeof(robby), cmp_robby);
     fprintf(stdout,"[*] %03d: %.2f\n", g, h_population[0].fitness);
-//#ifdef DEBUG
+#ifdef DEBUG
     fprintf(stdout,"[D] %03d: ", g);
     for(int i=0;i<GA_POP_SIZE;i++) fprintf(stdout,"%.2f ", h_population[i].fitness);
     fprintf(stdout,"\n");
-//#endif
+#endif
     if(g == GA_RUNS - 1)
       break;
-    crossover_and_mutate(h_population, GA_SELECTION);
+    crossover_and_mutate(debugFP, h_population, GA_SELECTION);
     CUDA_CALL(cudaMemcpy(d_population, h_population, population_bytes, cudaMemcpyHostToDevice));
+    fclose(debugFP);
   }
   fprintf(stdout,"[*] Best:\n");
   fprintf(stdout,"[*] - Fitness: %.10f\n",h_population[0].fitness);
@@ -235,6 +279,7 @@ void execute_ga(void){
 
   fprintf(stdout,"[*] Cleaning\n");
   stop_prng_device();
+  stop_host_prng();
   free(h_population);
   CUDA_CALL(cudaFree(d_population));
   CUDA_CALL(cudaFree(d_worlds));

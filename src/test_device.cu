@@ -400,7 +400,7 @@ void test_population_creation(int amount){
   fprintf(stdout,"[D] Num Blocks:  (%d, %d)\n",num_blocks.x, num_blocks.y);
   fprintf(stdout,"[D] Num Threads: (%d, %d)\n", num_threads.x, num_threads.y);
 #endif
-  execute_population<<<num_blocks_e, num_threads_e>>>(d_randState, prng_amount, d_population, amount, d_worlds, amount_worlds);
+  execute_population<<<num_blocks_e, num_threads_e>>>(d_randState, prng_amount, d_population, amount/*, d_worlds*/, amount_worlds);
   CUDA_CALL(cudaDeviceSynchronize());
   CUDA_CALL(cudaGetLastError());
   CUDA_CALL(cudaMemcpy(h_population, d_population, robby_bytes, cudaMemcpyDeviceToHost));

@@ -43,11 +43,13 @@ int main(int argc, char **argv)
   start_device();
 
   if(test == 1){
-    fprintf(stdout,"[*] Testing the device\n");
+   fprintf(stdout,"[*] Testing the device\n");
+   /*
     test_prng();
     test_uniform_prng(0,100);
     test_world_creation(100);
     test_population_creation(200);
+    */
   }
   else{
     execute_ga();

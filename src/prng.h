@@ -20,8 +20,10 @@
 
 #include <cuda.h>
 #include <curand_kernel.h>
+#include <gsl/gsl_rng.h>
 
-static curandState *d_randState; // Store globally the states, to be used on other modules and kernels as well
+//static curandState *d_randState; // Store globally the states, to be used on other modules and kernels as well
+//static gsl_rng *h_prng;
 
 /**
  * @brief Starts the PRNG on the GPU with default values
@@ -50,6 +52,9 @@ __device__ float get_uniform(curandState *state);
 __global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, int *data, int data_amount, int min, int max);
 
 __global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, float *data, int data_amount);
+
+int start_host_prng(void);
+void stop_host_prng(void);
 
 #endif // __PRNG_H
 

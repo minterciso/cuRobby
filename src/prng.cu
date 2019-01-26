@@ -21,25 +21,27 @@
 #include <cuda.h>
 #include <curand_kernel.h>
 #include <time.h>
+#include <sys/time.h>
+#include <gsl/gsl_rng.h>
 
 #include "utils.h"
 
 __global__ void setup_prng(curandState *state, unsigned long long seed, unsigned int amount){
-    const int tid = threadIdx.x + blockDim.x*blockIdx.x;
-    if(tid < amount)
-        curand_init(seed, 0, tid, &state[tid]);
+  const int tid = threadIdx.x + blockDim.x*blockIdx.x;
+  if(tid < amount)
+    curand_init(seed, 0, tid, &state[tid]);
 }
 
 __global__ void test_prng(curandState *state, unsigned int state_amnt, float *data, int data_amount){
-    const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-    if(tid < state_amnt && tid < data_amount){
-        float sum = 0.0;
-        curandState local_state = state[tid];
-        for(int i=0;i<100;i++)
-            sum += curand_uniform(&local_state);
-        data[tid] = sum/100;
-        state[tid] = local_state;
-    }
+  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
+  if(tid < state_amnt && tid < data_amount){
+    float sum = 0.0;
+    curandState local_state = state[tid];
+    for(int i=0;i<100;i++)
+      sum += curand_uniform(&local_state);
+    data[tid] = sum/100;
+    state[tid] = local_state;
+  }
 }
 
 __device__ int get_uniform(curandState *state, int min, int max){
