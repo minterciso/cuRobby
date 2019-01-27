@@ -7,6 +7,7 @@ bin_PROGRAMS=cuRobby
 cuRobby_SOURCES = main.c \
 		  	utils.h utils.cu\
 			ga.h ga.cu\
-			kernels.h kernels.cu
+			kernels.h kernels.cu \
+			read_parameters.h read_parameters.c
 cuRobby_CFLAGS  = $(CUDA_CFLAGS)
 cuRobby_LDADD  = $(CUDA_LIBS) -lcurand
