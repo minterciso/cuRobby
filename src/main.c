@@ -67,7 +67,8 @@ int main(int argc, char **argv)
     memset(output_fname, 0, fname_bytes);
     snprintf(output_fname, fname_bytes, "output.csv");
   }
-  ga_options *options = read_params(NULL);
+  //ga_options *options = read_params(NULL);
+  ga_options *options = read_params("parameters.conf");
 
   fprintf(stdout,"[*] Parameters used:\n");
   fprintf(stdout,"[*] - Generations:           %d\n", options->ga_runs);
@@ -79,12 +80,13 @@ int main(int argc, char **argv)
   if(selection_type == GA_SELECTION_ROULETTE) fprintf(stdout,"roulette'\n");
   else if(selection_type == GA_SELECTION_ELITE) fprintf(stdout, "elite'\n");
   else if(selection_type == GA_SELECTION_TOURNAMENT) fprintf(stdout,"tournament'\n");
-  fprintf(stdout,"[*] - Crossover probability: %.2f\n", options->ga_prob_xover);
-  fprintf(stdout,"[*] - Mutation probability:  %.2f\n", options->ga_prob_mutation);
+  fprintf(stdout,"[*] - Crossover probability: %.5f\n", options->ga_prob_xover);
+  fprintf(stdout,"[*] - Mutation probability:  %.5f\n", options->ga_prob_mutation);
   fprintf(stdout,"[*] - Output file:           '%s'\n", output_fname);
 #ifdef DEBUG
   fprintf(stdout,"[*] - Debug enabled!!!\n");
 #endif
+  return EXIT_SUCCESS;
   fprintf(stdout,"[*] Starting device\n");
   start_device();
 
