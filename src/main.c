@@ -16,6 +16,7 @@ void usage(FILE *stream, int exit_code){
   fprintf(stream, "\t-h\t\t--help\t\t\tThis help message\n");
   fprintf(stream, "\t-o file\t\t--output file\t\tEvolution output in a csv format\n");
   fprintf(stream, "\t-s type\t\t--selection type\tThe type of selection ('roulette', 'elite', 'tournament')\n");
+  fprintf(stream, "\t-p file\t\t--parameter file\tThe parameter file to read from\n");
   fprintf(stream, "Defaults: -o output.csv -s roulette\n");
   exit(exit_code);
 }
@@ -24,17 +25,19 @@ int main(int argc, char **argv)
 {
   // Program options
   prog_name = argv[0];
-  const char* const short_options = "ho:s:";
+  const char* const short_options = "ho:s:p:";
   const struct option long_options[] = {
       {"help",      0, NULL, 'h'},
       {"output",    1, NULL, 'o'},
       {"selection", 1, NULL, 's'},
+      {"parameter", 1, NULL, 'p'},
       {0,0,0,0}
   };
   int next_option;
   int selection_type = GA_SELECTION_ROULETTE;
   char *output_fname = NULL;
-  size_t fname_bytes = 0;
+  char *parameter_fname = NULL;
+  size_t fname_bytes = 0, p_fname_bytes = 0;
   do{
     next_option = getopt_long(argc, argv, short_options, long_options, NULL);
     switch(next_option){
@@ -47,6 +50,15 @@ int main(int argc, char **argv)
         }
         memset(output_fname, 0, fname_bytes);
         snprintf(output_fname, fname_bytes, "%s", optarg);
+        break;
+      case 'p':
+        p_fname_bytes = sizeof(char)*(strlen(optarg)+1);
+        if((parameter_fname=(char*)malloc(p_fname_bytes))==NULL){
+          perror("malloc");
+          abort();
+        }
+        memset(parameter_fname, 0, p_fname_bytes);
+        snprintf(parameter_fname, p_fname_bytes, "%s", optarg);
         break;
       case 's':
         if(strcmp(optarg, "roulette") == 0) selection_type = GA_SELECTION_ROULETTE;
@@ -67,10 +79,10 @@ int main(int argc, char **argv)
     memset(output_fname, 0, fname_bytes);
     snprintf(output_fname, fname_bytes, "output.csv");
   }
-  //ga_options *options = read_params(NULL);
-  ga_options *options = read_params("parameters.conf");
+  ga_options *options = read_params(parameter_fname);
 
   fprintf(stdout,"[*] Parameters used:\n");
+  fprintf(stdout,"[*] - Paramter file:         %s\n", (parameter_fname==NULL)?"None":parameter_fname);
   fprintf(stdout,"[*] - Generations:           %d\n", options->ga_runs);
   fprintf(stdout,"[*] - Population size:       %d\n", options->ga_pop_size);
   fprintf(stdout,"[*] - Elite size:            %d\n", options->ga_pop_elite);
@@ -86,7 +98,6 @@ int main(int argc, char **argv)
 #ifdef DEBUG
   fprintf(stdout,"[*] - Debug enabled!!!\n");
 #endif
-  return EXIT_SUCCESS;
   fprintf(stdout,"[*] Starting device\n");
   start_device();
 
@@ -97,6 +108,8 @@ int main(int argc, char **argv)
   fprintf(stdout,"[*] Finished in %f s\n", cpu_second() - t_start);
 
   free(output_fname);
+  if(parameter_fname)
+    free(parameter_fname);
   free(options);
 
   fprintf(stdout,"[*] Stopping device\n");
