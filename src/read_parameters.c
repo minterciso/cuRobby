@@ -67,7 +67,6 @@ ga_options* read_params(const char *param_file){
       opt->ga_prob_xover = atof(val);
     else if(strcmp(option, "GA_WORLDS")==0)
       opt->ga_worlds = atoi(val);
-    fprintf(stdout,"Option: %s\nValue:%s\n", option, val);
   }
   fclose(fp);
   return opt;

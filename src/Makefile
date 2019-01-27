@@ -99,9 +99,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-am_cuRobby_OBJECTS = cuRobby-main.$(OBJEXT) prng.$(OBJEXT) \
-	test_device.$(OBJEXT) utils.$(OBJEXT) world.$(OBJEXT) \
-	ga.$(OBJEXT) robby.$(OBJEXT)
+am_cuRobby_OBJECTS = cuRobby-main.$(OBJEXT) utils.$(OBJEXT) \
+	ga.$(OBJEXT) kernels.$(OBJEXT) \
+	cuRobby-read_parameters.$(OBJEXT)
 cuRobby_OBJECTS = $(am_cuRobby_OBJECTS)
 am__DEPENDENCIES_1 =
 cuRobby_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -122,7 +122,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I. -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/cuRobby-main.Po
+am__depfiles_remade = ./$(DEPDIR)/cuRobby-main.Po \
+	./$(DEPDIR)/cuRobby-read_parameters.Po
 am__mv = mv -f
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
@@ -176,7 +177,7 @@ AUTOMAKE = ${SHELL} /home/minterciso/Programacao/cuda/cuRobby/missing automake-1
 AWK = mawk
 CC = g++
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -ggdb
+CFLAGS = -O3 -fexpensive-optimizations -use_fast_math
 CPP = gcc -E
 CPPFLAGS = 
 CUDA_CFLAGS = -I/usr/local/cuda/include
@@ -198,13 +199,13 @@ INSTALL_SCRIPT = ${INSTALL}
 INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 LDFLAGS = 
 LIBOBJS = 
-LIBS = -lm 
+LIBS = -lgsl -lgslcblas -lm -lm 
 LTLIBOBJS = 
 MAKEINFO = ${SHELL} /home/minterciso/Programacao/cuda/cuRobby/missing makeinfo
 MKDIR_P = /bin/mkdir -p
 NVCC = nvcc
-NVCCFLAGS = -g -G
-NVCC_CFLAGS = -g -G
+NVCCFLAGS = -O3 -use_fast_math
+NVCC_CFLAGS = -O3 -use_fast_math
 OBJEXT = o
 PACKAGE = curobby
 PACKAGE_BUGREPORT = minterciso@gmail.com
@@ -263,12 +264,10 @@ top_builddir = ..
 top_srcdir = ..
 CCLD = $(CC)
 cuRobby_SOURCES = main.c \
-		  	prng.h prng.cu \
-		 	test_device.h test_device.cu\
 		  	utils.h utils.cu\
-			world.h world.cu \
 			ga.h ga.cu\
-			robby.h robby.cu
+			kernels.h kernels.cu \
+			read_parameters.h read_parameters.c
 
 cuRobby_CFLAGS = $(CUDA_CFLAGS)
 cuRobby_LDADD = $(CUDA_LIBS) -lcurand
@@ -359,6 +358,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 include ./$(DEPDIR)/cuRobby-main.Po # am--include-marker
+include ./$(DEPDIR)/cuRobby-read_parameters.Po # am--include-marker
 
 $(am__depfiles_remade):
 	@$(MKDIR_P) $(@D)
@@ -393,6 +393,20 @@ cuRobby-main.obj: main.c
 #	$(AM_V_CC)source='main.c' object='cuRobby-main.obj' libtool=no \
 #	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
 #	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(cuRobby_CFLAGS) $(CFLAGS) -c -o cuRobby-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+
+cuRobby-read_parameters.o: read_parameters.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(cuRobby_CFLAGS) $(CFLAGS) -MT cuRobby-read_parameters.o -MD -MP -MF $(DEPDIR)/cuRobby-read_parameters.Tpo -c -o cuRobby-read_parameters.o `test -f 'read_parameters.c' || echo '$(srcdir)/'`read_parameters.c
+	$(AM_V_at)$(am__mv) $(DEPDIR)/cuRobby-read_parameters.Tpo $(DEPDIR)/cuRobby-read_parameters.Po
+#	$(AM_V_CC)source='read_parameters.c' object='cuRobby-read_parameters.o' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(cuRobby_CFLAGS) $(CFLAGS) -c -o cuRobby-read_parameters.o `test -f 'read_parameters.c' || echo '$(srcdir)/'`read_parameters.c
+
+cuRobby-read_parameters.obj: read_parameters.c
+	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(cuRobby_CFLAGS) $(CFLAGS) -MT cuRobby-read_parameters.obj -MD -MP -MF $(DEPDIR)/cuRobby-read_parameters.Tpo -c -o cuRobby-read_parameters.obj `if test -f 'read_parameters.c'; then $(CYGPATH_W) 'read_parameters.c'; else $(CYGPATH_W) '$(srcdir)/read_parameters.c'; fi`
+	$(AM_V_at)$(am__mv) $(DEPDIR)/cuRobby-read_parameters.Tpo $(DEPDIR)/cuRobby-read_parameters.Po
+#	$(AM_V_CC)source='read_parameters.c' object='cuRobby-read_parameters.obj' libtool=no \
+#	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) \
+#	$(AM_V_CC_no)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(cuRobby_CFLAGS) $(CFLAGS) -c -o cuRobby-read_parameters.obj `if test -f 'read_parameters.c'; then $(CYGPATH_W) 'read_parameters.c'; else $(CYGPATH_W) '$(srcdir)/read_parameters.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -522,6 +536,7 @@ clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/cuRobby-main.Po
+	-rm -f ./$(DEPDIR)/cuRobby-read_parameters.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -568,6 +583,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/cuRobby-main.Po
+	-rm -f ./$(DEPDIR)/cuRobby-read_parameters.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

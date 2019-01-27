@@ -2,10 +2,16 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Debug current program */
-#define DEBUG 1
+/* #undef DEBUG */
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
+
+/* Define to 1 if you have the `gsl' library (-lgsl). */
+#define HAVE_LIBGSL 1
+
+/* Define to 1 if you have the `gslcblas' library (-lgslcblas). */
+#define HAVE_LIBGSLCBLAS 1
 
 /* Define to 1 if you have the `m' library (-lm). */
 #define HAVE_LIBM 1

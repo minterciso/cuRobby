@@ -279,8 +279,6 @@ void execute_ga(int selection_type, const char *output, ga_options *options){
 #endif
     num_blocks = options->ga_pop_size/num_threads + 1;
     execute_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, options->ga_pop_size, options->ga_worlds);
-    CUDA_CALL(cudaDeviceSynchronize());
-    CUDA_CALL(cudaGetLastError());
     CUDA_CALL(cudaMemcpy(h_population, d_population, population_bytes, cudaMemcpyDeviceToHost));
     qsort(h_population, options->ga_pop_size, sizeof(robby), cmp_robby);
     fprintf(fp,"%d,%.10f\n", g, h_population[0].fitness);
