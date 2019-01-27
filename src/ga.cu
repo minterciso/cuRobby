@@ -92,8 +92,9 @@ void stop_host_prng(void){
  * @param pop The population to look for the individual
  * @param weighted_sum The summed weight used on the roulette selection
  * @param selection_type The selection type to search individuals
+ * @param options The GA Options
  */
-int select_individual(robby *pop, double weighted_sum, int selection_type){
+int select_individual(robby *pop, double weighted_sum, int selection_type, ga_options *options){
   if(selection_type == GA_SELECTION_ROULETTE){
     float rnd = 0.0;
     float sum = 0.0;
@@ -109,13 +110,13 @@ int select_individual(robby *pop, double weighted_sum, int selection_type){
     return index;
   }
   if(selection_type == GA_SELECTION_ELITE){
-    return gsl_rng_uniform_int(h_prng, GA_POP_ELITE);
+    return gsl_rng_uniform_int(h_prng, options->ga_pop_elite);
   }
   if(selection_type == GA_SELECTION_TOURNAMENT){
     // Select at random 2 individuals and return the one with the best fitness
     int idx1, idx2;
-    idx1 = gsl_rng_uniform_int(h_prng, GA_POP_SIZE);
-    idx2 = gsl_rng_uniform_int(h_prng, GA_POP_SIZE);
+    idx1 = gsl_rng_uniform_int(h_prng, options->ga_pop_size);
+    idx2 = gsl_rng_uniform_int(h_prng, options->ga_pop_size);
     if(pop[idx1].fitness > pop[idx2].fitness) return idx1;
     return idx2;
   }
@@ -127,17 +128,18 @@ int select_individual(robby *pop, double weighted_sum, int selection_type){
  * @param debugFP An already openned file for debug (defaults to output/debug/ directory)
  * @param pop The population (old, and will receive the new one)
  * @param selection_type The selection type to use
+ * @param options The GA Options
  */
-int create_new_population(FILE *debugFP, robby *pop, int selection_type){
+int create_new_population(FILE *debugFP, robby *pop, int selection_type, ga_options *options){
   robby *old_pop = NULL;
-  size_t pop_bytes = sizeof(robby) * GA_POP_SIZE;
+  size_t pop_bytes = sizeof(robby) * options->ga_pop_size;
 
   // Calculate the weighted_sum
   double weighted_sum = 0;
   if(selection_type == GA_SELECTION_ROULETTE){
     // We rank the weights based on the sorting of the individual, due to the negative fitness values.
-    for(int i=0;i<GA_POP_SIZE;i++){
-      pop[i].weight = (float)(GA_POP_SIZE-i);
+    for(int i=0;i<options->ga_pop_size;i++){
+      pop[i].weight = (float)(options->ga_pop_size-i);
       weighted_sum += pop[i].weight;
     }
   }
@@ -154,14 +156,14 @@ int create_new_population(FILE *debugFP, robby *pop, int selection_type){
 #ifdef DEBUG
   fprintf(debugFP, "Weighted Sum: %f\n", weighted_sum);
 #endif
-  for(int i=0;i<GA_POP_SIZE;i++){
+  for(int i=0;i<options->ga_pop_size;i++){
     int p1_idx, p2_idx;
     int xp;
     // Select 2 parents
-    p1_idx = select_individual(old_pop, weighted_sum, selection_type);
-    p2_idx = select_individual(old_pop, weighted_sum, selection_type);
+    p1_idx = select_individual(old_pop, weighted_sum, selection_type, options);
+    p2_idx = select_individual(old_pop, weighted_sum, selection_type, options);
     // If we have to crossover...
-    if(gsl_rng_uniform(h_prng) < GA_PROB_XOVER){
+    if(gsl_rng_uniform(h_prng) < options->ga_prob_xover){
       // Select a random xover point
       xp = gsl_rng_uniform_int(h_prng, S_SIZE);
       // Create 1 son
@@ -191,7 +193,7 @@ int create_new_population(FILE *debugFP, robby *pop, int selection_type){
     pop[i].weight = -99.99;
     // Now check for mutation
     for(int j=0;j<S_SIZE;j++){
-      if(gsl_rng_uniform(h_prng) < GA_PROB_MUTATION){
+      if(gsl_rng_uniform(h_prng) < options->ga_prob_mutation){
         pop[i].strategy[j] = gsl_rng_uniform_int(h_prng, S_MAX_OPTIONS);
 #ifdef DEBUG
         fprintf(debugFP, "(%d) = %d\n", j,pop[i].strategy[j]);
@@ -203,18 +205,18 @@ int create_new_population(FILE *debugFP, robby *pop, int selection_type){
   return 0;
 }
 
-void execute_ga(int selection_type, const char *output){
+void execute_ga(int selection_type, const char *output, ga_options *options){
   FILE *debugFP = NULL;
 #ifdef DEBUG
   char fname[30];
   memset(fname, 0, 30);
 #endif
   //parameters
-  int prng_amount = GA_POP_SIZE;
+  int prng_amount = options->ga_pop_size;
   robby *h_population, *d_population;
   world *d_worlds;
-  size_t population_bytes = sizeof(robby)*GA_POP_SIZE;
-  size_t world_bytes = sizeof(world)*GA_WORLDS;
+  size_t population_bytes = sizeof(robby)*options->ga_pop_size;
+  size_t world_bytes = sizeof(world)*options->ga_worlds;
   FILE *fp;
   fprintf(stdout,"[*] Creating file '%s'\n", output);
   if((fp = fopen(output, "w"))==NULL){
@@ -241,7 +243,7 @@ void execute_ga(int selection_type, const char *output){
   fprintf(stdout,"[D] World size:      %.2f MB\n", (float)(world_bytes/(1024.0f*1024.0f)));
   fprintf(stdout,"[D] Host memory\n");
 #endif
-  if((h_population=(robby*)calloc(GA_POP_SIZE, sizeof(robby)))==NULL){
+  if((h_population=(robby*)calloc(options->ga_pop_size, sizeof(robby)))==NULL){
     perror("calloc");
     abort();
   }
@@ -256,18 +258,18 @@ void execute_ga(int selection_type, const char *output){
 
   fprintf(stdout,"[*] Creating initial population\n");
   int num_threads = 32;
-  int num_blocks = GA_POP_SIZE/num_threads + 1;
+  int num_blocks = options->ga_pop_size/num_threads + 1;
 #ifdef DEBUG
   fprintf(stdout,"[D] Kernel parameters:\n");
   fprintf(stdout," - # blocks:  %d\n", num_blocks);
   fprintf(stdout," - # threads: %d\n", num_threads);
 #endif
-  create_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, GA_POP_SIZE);
+  create_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, options->ga_pop_size);
   CUDA_CALL(cudaDeviceSynchronize());
   CUDA_CALL(cudaGetLastError());
 
   fprintf(stdout,"[*] Evolving\n");
-  for(int g=0;g<GA_RUNS;g++){
+  for(int g=0;g<options->ga_runs;g++){
 #ifdef DEBUG
     snprintf(fname, 30, "output/debug/xover_%d.log", g);
     if((debugFP = fopen(fname, "w"))==NULL){
@@ -275,22 +277,22 @@ void execute_ga(int selection_type, const char *output){
       abort();
     }
 #endif
-    num_blocks = GA_POP_SIZE/num_threads + 1;
-    execute_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, GA_POP_SIZE/*, d_worlds*/, GA_WORLDS);
+    num_blocks = options->ga_pop_size/num_threads + 1;
+    execute_population<<<num_blocks, num_threads>>>(d_randState, prng_amount, d_population, options->ga_pop_size, options->ga_worlds);
     CUDA_CALL(cudaDeviceSynchronize());
     CUDA_CALL(cudaGetLastError());
     CUDA_CALL(cudaMemcpy(h_population, d_population, population_bytes, cudaMemcpyDeviceToHost));
-    qsort(h_population, GA_POP_SIZE, sizeof(robby), cmp_robby);
+    qsort(h_population, options->ga_pop_size, sizeof(robby), cmp_robby);
     fprintf(fp,"%d,%.10f\n", g, h_population[0].fitness);
 #ifdef DEBUG
     fprintf(stdout,"[D] %03d: %.2f\n", g, h_population[0].fitness);
     fprintf(stdout,"[D] %03d: ", g);
-    for(int i=0;i<GA_POP_SIZE;i++) fprintf(stdout,"%.2f ", h_population[i].fitness);
+    for(int i=0;i<options->ga_pop_size;i++) fprintf(stdout,"%.2f ", h_population[i].fitness);
     fprintf(stdout,"\n");
 #endif
-    if(g == GA_RUNS - 1)
+    if(g == options->ga_runs - 1)
       break;
-    create_new_population(debugFP, h_population, selection_type);
+    create_new_population(debugFP, h_population, selection_type, options);
     CUDA_CALL(cudaMemcpy(d_population, h_population, population_bytes, cudaMemcpyHostToDevice));
 #ifdef DEBUG
     fclose(debugFP);

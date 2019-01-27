@@ -7,6 +7,7 @@
 #include "consts.h"
 #include "utils.h"
 #include "ga.h"
+#include "read_parameters.h"
 
 const char *prog_name;
 
@@ -66,19 +67,20 @@ int main(int argc, char **argv)
     memset(output_fname, 0, fname_bytes);
     snprintf(output_fname, fname_bytes, "output.csv");
   }
+  ga_options *options = read_params(NULL);
 
   fprintf(stdout,"[*] Parameters used:\n");
-  fprintf(stdout,"[*] - Generations:           %d\n", GA_RUNS);
-  fprintf(stdout,"[*] - Population size:       %d\n", GA_POP_SIZE);
-  fprintf(stdout,"[*] - Elite size:            %d\n", (int)(GA_POP_ELITE));
-  fprintf(stdout,"[*] - Tournament size:       %d\n", GA_TOURNAMENT_AMOUNT);
-  fprintf(stdout,"[*] - Amount of worlds:      %d\n", GA_WORLDS);
+  fprintf(stdout,"[*] - Generations:           %d\n", options->ga_runs);
+  fprintf(stdout,"[*] - Population size:       %d\n", options->ga_pop_size);
+  fprintf(stdout,"[*] - Elite size:            %d\n", options->ga_pop_elite);
+  fprintf(stdout,"[*] - Tournament size:       %d\n", options->ga_tournament_amount);
+  fprintf(stdout,"[*] - Amount of worlds:      %d\n", options->ga_worlds);
   fprintf(stdout,"[*] - Selection Type:        '");
   if(selection_type == GA_SELECTION_ROULETTE) fprintf(stdout,"roulette'\n");
   else if(selection_type == GA_SELECTION_ELITE) fprintf(stdout, "elite'\n");
   else if(selection_type == GA_SELECTION_TOURNAMENT) fprintf(stdout,"tournament'\n");
-  fprintf(stdout,"[*] - Crossover probability: %.2f\n", GA_PROB_XOVER);
-  fprintf(stdout,"[*] - Mutation probability:  %.2f\n", GA_PROB_MUTATION);
+  fprintf(stdout,"[*] - Crossover probability: %.2f\n", options->ga_prob_xover);
+  fprintf(stdout,"[*] - Mutation probability:  %.2f\n", options->ga_prob_mutation);
   fprintf(stdout,"[*] - Output file:           '%s'\n", output_fname);
 #ifdef DEBUG
   fprintf(stdout,"[*] - Debug enabled!!!\n");
@@ -89,10 +91,11 @@ int main(int argc, char **argv)
   fprintf(stdout,"[*] Starting evolution...\n");
   double t_start;
   t_start = cpu_second();
-  execute_ga(selection_type, output_fname);
+  execute_ga(selection_type, output_fname, options);
   fprintf(stdout,"[*] Finished in %f s\n", cpu_second() - t_start);
 
   free(output_fname);
+  free(options);
 
   fprintf(stdout,"[*] Stopping device\n");
   reset_device();
