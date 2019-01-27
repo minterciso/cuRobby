@@ -42,5 +42,11 @@ void start_device(void);
  */
 void reset_device(void);
 
+/**
+ * @brief Get's the cpu seconds and returns as a double
+ * @return The amount of milliseconds since epoch
+ */
+double cpu_second(void);
+
 #endif //__UTILS_H
 

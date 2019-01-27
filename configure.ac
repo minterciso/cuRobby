@@ -68,6 +68,10 @@ AC_CHECK_HEADERS([limits.h stdlib.h string.h math.h $CUDA_PATH/include/cuda.h])
 AC_TYPE_SIZE_T
 
 # Checks for library functions.
+AC_CHECK_LIB([m],[cos])
+AC_CHECK_LIB([gslcblas],[cblas_dgemm])
+AC_CHECK_LIB([gsl],[gsl_blas_dgemm])
+
 
 AC_CONFIG_FILES([Makefile
                  src/Makefile])
