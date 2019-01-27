@@ -5,7 +5,6 @@ CC = g++
 CCLD=$(CC)
 bin_PROGRAMS=cuRobby
 cuRobby_SOURCES = main.c \
-		 	test_device.h test_device.cu\
 		  	utils.h utils.cu\
 			ga.h ga.cu\
 			kernels.h kernels.cu

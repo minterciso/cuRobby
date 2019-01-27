@@ -49,6 +49,7 @@
 
 // GA
 #define GA_RUNS 500
+#define GA_TOURNAMENT_AMOUNT 2
 #define GA_POP_SIZE 200
 #define GA_POP_ELITE GA_POP_SIZE * 0.2
 #define GA_PROB_MUTATION 0.005

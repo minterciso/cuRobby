@@ -5,7 +5,6 @@
  *      Author: minterciso
  */
 #include "kernels.h"
-#include "prng.h"
 #include "consts.h"
 #include "utils.h"
 
@@ -20,7 +19,17 @@
 /*********
  * ROBBY *
  ********/
-__global__ void execute_population(curandState *states, int amount_states, robby *d_robby, int amount_robby/*, world *d_world*/, int amount_world){
+/**
+ * @brief Execute the population and get the fitness for every individual
+ * This function will execute the population in parallel on the GPU, each thread will handle exactly 1 individual.
+ * @param states An already initialized curandState array (one per thread)
+ * @param amount_states The amount of states present on the array
+ * @param d_robby The already initialized population
+ * @param amount_world The amount of world for each individual to run
+ * @note There are some small improvements that we can make here, for instance, if we are SURE that the amount of states is the amount of threads, there's no use for the if and
+ * the amount_states and amount_robby parameters.
+ */
+__global__ void execute_population(curandState *states, int amount_states, robby *d_robby, int amount_robby, int amount_world){
   const int tid = threadIdx.x + blockIdx.x*blockDim.x;
   if(tid < amount_states && tid < amount_robby){
     for(int world_id = 0; world_id < amount_world; world_id++){
@@ -35,6 +44,14 @@ __global__ void execute_population(curandState *states, int amount_states, robby
   }
 }
 
+/**
+ * @brief Convert an array in any base to decimal
+ * @param arr The array to convert
+ * @param base The base the array currently is
+ * @param len The size of the array
+ * @return The decimal converted number
+ * @warning Currently this has a caps limit for int numbers
+ */
 __device__ int to_decimal(int *arr, int base, int len){
   int power = 1;
   int num = 0;
@@ -48,6 +65,16 @@ __device__ int to_decimal(int *arr, int base, int len){
   return num;
 }
 
+/**
+ * @brief Create the population on the GPU
+ * @note Each thread on the GPU is responsible for creating one individual
+ * @param states The curandState states (one per thread)
+ * @param amount_states The amount of states on the array
+ * @param d_robby The allocated population on the device
+ * @param amount_robby The size of the population
+ * @note There are some small improvements that we can make here, for instance, if we are SURE that the amount of states is the amount of threads, there's no use for the if and
+ * the amount_states and amount_robby parameters.
+ */
 __global__ void create_population(curandState *states, int amount_states, robby *d_robby, int amount_robby){
   const int tid = threadIdx.x + blockDim.x*blockIdx.x;
   if(tid < amount_states && tid < amount_robby){
@@ -55,12 +82,18 @@ __global__ void create_population(curandState *states, int amount_states, robby 
     d_robby[tid].fitness = -99.0;
     d_robby[tid].weight = -99.0;
     for(int i=0;i<S_SIZE;i++)
-      //d_robby[tid].strategy[i] = get_uniform(&local_state, 0, S_MAX_OPTIONS);
       d_robby[tid].strategy[i] = (int)(curand_uniform(&local_state) * S_MAX_OPTIONS);
     states[tid] = local_state;
   }
 }
 
+/**
+ * @brief Execute the strategy and return the score
+ * @param state The curandState to use for random movements
+ * @param d_robby The individual we are executing
+ * @param w The world we are facing
+ * @return The score for one execution of the strategy
+ */
 __device__ int execute_strategy(curandState *state, robby *d_robby, world *w){
   int n[5]; // neighbours
   int r_row, r_col; // robby position
@@ -144,62 +177,40 @@ __device__ int execute_strategy(curandState *state, robby *d_robby, world *w){
 /********
  * PRNG *
  *******/
+/**
+ * @brief Start the device PRNG
+ * @param state The allocated array of curandState to initialize
+ * @param seed The seed to start each state
+ * @param amount The amount of state to initialize
+ * @note There are some small improvements that we can make here, for instance, if we are SURE that the amount of states is the amount of threads, there's no use for the if and
+ * the amount parameter.
+ */
 __global__ void setup_prng(curandState *state, unsigned long long seed, unsigned int amount){
   const int tid = threadIdx.x + blockDim.x*blockIdx.x;
   if(tid < amount)
     curand_init(seed, 0, tid, &state[tid]);
 }
 
-__global__ void test_prng(curandState *state, unsigned int state_amnt, float *data, int data_amount){
-  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-  if(tid < state_amnt && tid < data_amount){
-    float sum = 0.0;
-    curandState local_state = state[tid];
-    for(int i=0;i<100;i++)
-      sum += curand_uniform(&local_state);
-    data[tid] = sum/100;
-    state[tid] = local_state;
-  }
-}
-
+/**
+ * @brief Returns an uniform value between min and max
+ * @param state The state to get the value from
+ * @param min The minimum value
+ * @param max The maximum value
+ * @return A value between (min,max( from a uniform distribution
+ */
 __device__ int get_uniform(curandState *state, int min, int max){
   return (int)( min + curand_uniform(state) * max);
-}
-
-__device__ float get_uniform(curandState *state){
-  return curand_uniform(state);
-}
-
-__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, int *data, int data_amount, int min, int max){
-  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-  if(tid < state_amnt && tid < data_amount){
-    curandState local_state = states[tid];
-    data[tid] = get_uniform(&local_state, min, max);
-    states[tid] = local_state;
-  }
-}
-
-__global__ void test_prng_uniform(curandState *states, unsigned int state_amnt, float *data, int data_amount){
-  const int tid = threadIdx.x + blockDim.x * blockIdx.x;
-  if(tid < state_amnt && tid < data_amount){
-    curandState local_state = states[tid];
-    data[tid] = curand_uniform(&local_state);
-    states[tid] = local_state;
-  }
 }
 
 /*********
  * WORLD *
  ********/
-__global__ void create_worlds(curandState *states, int amount_states, world* d_worlds, int amount_worlds){
-  const int state_id = threadIdx.x + blockIdx.x*blockDim.x;
-  if(state_id < amount_states && state_id < amount_worlds){
-    curandState local_state = states[state_id];
-    create_world(&local_state, &d_worlds[state_id]);
-    states[state_id] = local_state;
-  }
-}
-
+/**
+ * @brief Create one world with random cans to execute
+ * @param state The curandState to use
+ * @param d_world An initialized world to work on
+ * @return The amount of cans
+ */
 __device__ int create_world(curandState *state, world *d_world){
   d_world->qtd_cans = 0;
   d_world->r_row = 0;
